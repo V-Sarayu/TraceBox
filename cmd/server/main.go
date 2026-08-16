@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/V-Sarayu/tracebox/internal/api"
 	"github.com/V-Sarayu/tracebox/internal/config"
+	"github.com/V-Sarayu/tracebox/internal/proxy"
 	"github.com/V-Sarayu/tracebox/internal/storage"
 	"github.com/joho/godotenv"
 )
@@ -29,12 +31,34 @@ func main() {
 	defer db.Close()
 	log.Println("connected to postgres")
 
+	store := storage.NewPostgresRequestStore(db)
+
+	replayHandler := api.NewReplayHandler(store, "http://localhost:8080")
+	diffHandler := api.NewDiffHandler(store)
+	listHandler := api.NewListHandler(store)
+	graphHandler := api.NewGraphHandler(store)
+
+	p, err := proxy.New(store, map[string]string{
+		"/orders":    "http://localhost:9001",
+		"/inventory": "http://localhost:9002",
+	})
+	if err != nil {
+		log.Fatalf("failed to set up proxy: %v", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
+	mux.Handle("/orders/", p)
+	mux.Handle("/inventory/", p)
+	mux.Handle("/api/replay", replayHandler)
+	mux.Handle("/api/requests", listHandler)
+	mux.Handle("/api/diff", diffHandler)
+	mux.Handle("/api/graph", graphHandler)
 
 	addr := ":8080"
-	log.Printf("TraceBox server listening on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	log.Printf("TraceBox proxy listening on %s", addr)
+
+	if err := http.ListenAndServe(addr, api.WithCORS(mux)); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
 }
