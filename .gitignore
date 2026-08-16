@@ -1,0 +1,39 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of `go build`
+/bin/
+/tmp/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Env files — never commit real credentials
+.env
+.env.local
+*.env.local
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Docker volumes (if any get mounted locally)
+pgdata/
+
+# Node (for the React dashboard, arriving week 2)
+node_modules/
+web/dist/
+web/build/
