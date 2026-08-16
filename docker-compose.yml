@@ -10,11 +10,66 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./internal/storage/migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tracebox}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: tracebox-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  inventory:
+    build:
+      context: .
+      dockerfile: demo-services/inventory/Dockerfile
+    container_name: tracebox-inventory
+    ports:
+      - "9002:9002"
+
+  orders:
+    build:
+      context: .
+      dockerfile: demo-services/orders/Dockerfile
+    container_name: tracebox-orders
+    environment:
+      PROXY_URL: http://server:8080
+    ports:
+      - "9001:9001"
+    depends_on:
+      - inventory
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracebox-server
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-tracebox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tracebox}
+      POSTGRES_DB: ${POSTGRES_DB:-tracebox}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ORDERS_URL: http://orders:9001
+      INVENTORY_URL: http://inventory:9002
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   pgdata:

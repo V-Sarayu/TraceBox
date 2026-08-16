@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -16,9 +17,13 @@ type orderResponse struct {
 
 func ordersHandler(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(time.Duration(rand.Intn(80)) * time.Millisecond)
+	proxyURL := os.Getenv("PROXY_URL")
+	if proxyURL == "" {
+		proxyURL = "http://localhost:8080"
+	}
 
 	// call inventory THROUGH the proxy, not directly — this is what makes it a real hop
-	req, err := http.NewRequest("GET", "http://localhost:8080/inventory/check", nil)
+	req, err := http.NewRequest("GET", proxyURL+"/inventory/check", nil)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

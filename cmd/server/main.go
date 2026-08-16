@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/V-Sarayu/tracebox/internal/api"
 	"github.com/V-Sarayu/tracebox/internal/config"
@@ -38,9 +39,17 @@ func main() {
 	listHandler := api.NewListHandler(store)
 	graphHandler := api.NewGraphHandler(store)
 
+	ordersURL := os.Getenv("ORDERS_URL")
+	if ordersURL == "" {
+		ordersURL = "http://localhost:9001"
+	}
+	inventoryURL := os.Getenv("INVENTORY_URL")
+	if inventoryURL == "" {
+		inventoryURL = "http://localhost:9002"
+	}
 	p, err := proxy.New(store, map[string]string{
-		"/orders":    "http://localhost:9001",
-		"/inventory": "http://localhost:9002",
+		"/orders":    ordersURL,
+		"/inventory": inventoryURL,
 	})
 	if err != nil {
 		log.Fatalf("failed to set up proxy: %v", err)
