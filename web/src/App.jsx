@@ -29,9 +29,14 @@ function HistoryView() {
   }, []);
 
   useEffect(() => {
-    fetchRequests();
-    const interval = setInterval(fetchRequests, 4000); // poll for near-live updates
-    return () => clearInterval(interval);
+    fetchRequests(); // initial load
+
+    const ws = new WebSocket('ws://localhost:8080/ws');
+    ws.onmessage = () => fetchRequests(); // new request recorded -> refresh the list
+    ws.onerror = () => console.warn('websocket error, falling back to polling');
+
+    const interval = setInterval(fetchRequests, 8000); // fallback safety net
+    return () => { ws.close(); clearInterval(interval); };
   }, [fetchRequests]);
 
   const toggleSelect = (id) => {
@@ -172,9 +177,14 @@ function GraphView() {
   }, []);
 
   useEffect(() => {
-    fetchGraph();
-    const interval = setInterval(fetchGraph, 4000);
-    return () => clearInterval(interval);
+    fetchGraph(); // initial load
+
+    const ws = new WebSocket('ws://localhost:8080/ws');
+    ws.onmessage = () => fetchGraph(); // a new request came in -> refresh the graph
+    ws.onerror = () => console.warn('websocket error, falling back to polling');
+
+    const interval = setInterval(fetchGraph, 8000); // fallback safety net
+    return () => { ws.close(); clearInterval(interval); };
   }, [fetchGraph]);
 
   return (
